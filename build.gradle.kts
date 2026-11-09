@@ -1,8 +1,11 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+
 plugins {
   id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.14"
-  kotlin("plugin.spring") version "2.4.21"
-  kotlin("plugin.jpa") version "2.4.21"
-  kotlin("plugin.lombok") version "2.4.21"
+  kotlin("plugin.spring")
+  kotlin("plugin.jpa")
+  kotlin("plugin.lombok")
 }
 
 configurations {
@@ -90,6 +93,41 @@ kotlin {
     jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
   }
   kotlinDaemonJvmArgs = listOf("-Xmx1g", "-Xms256m", "-XX:+UseParallelGC")
+}
+
+val kotlinLanguageVersionOverride =
+  providers.gradleProperty("kotlin_language_version")
+    .map(KotlinVersion::fromVersion)
+    .orNull
+
+val kotlinApiVersionOverride =
+  providers.gradleProperty("kotlin_api_version")
+    .map(KotlinVersion::fromVersion)
+    .orNull
+
+tasks.withType<KotlinCompilationTask<*>>().configureEach {
+  compilerOptions {
+    kotlinLanguageVersionOverride?.let {
+      languageVersion.set(it)
+    }
+
+    kotlinApiVersionOverride?.let {
+      apiVersion.set(it)
+    }
+
+    val requiredArgs = listOf(
+      "-Xreport-all-warnings",
+      "-Xrender-internal-diagnostic-names",
+    )
+
+    freeCompilerArgs.set(
+      (freeCompilerArgs.getOrElse(emptyList()) + requiredArgs)
+        .filterNot { it == "-Werror" }
+        .distinct(),
+    )
+
+    allWarningsAsErrors.set(false)
+  }
 }
 
 tasks {
